@@ -213,10 +213,17 @@ class Iceberg2D:
         self.Ix = self.shape.Ix * self.density_ice
         self.Iy = self.shape.Iy * self.density_ice
         self.Iz = self.shape.Iz * self.density_ice
-        self.update_vertices()
-        self.update_submerged()
         self.calculate_forces_torques()
 
+    def calculate_forces_torques(self):
+        self.update_vertices()
+        self.update_submerged()
+        self.gravitational_force = -self.mass * self.gravity
+        self.buoyancy_force = self.volume_submerged * self.density_water * self.gravity
+        self.torque = (self.submerged.centroid.x - self.x) * self.buoyancy_force
+        self.Fx = 0.0
+        self.Fz = self.buoyancy_force + self.gravitational_force
+        self.Gy = self.torque
 
     def update_vertices(self):
         self.vertices = Polygon()
@@ -241,7 +248,6 @@ class Iceberg2D:
                     self.submerged.insert_point(vertex.intersection_with_horizontal(vertex.next, self.water_level))
 
         self.volume_submerged = self.submerged.area * self.length
-
 
     def plot_iceberg(self):
         points = []
@@ -277,13 +283,23 @@ class Iceberg2D:
         ax.legend()
         plt.show()
 
-    def calculate_forces_torques(self):
-        self.gravitational_force = -self.mass * self.gravity
-        self.buoyancy_force = self.volume_submerged * self.density_ice * self.gravity
-        self.torque = (self.submerged.centroid.x - self.x) * self.buoyancy_force
-        self.Fx = 0.0
-        self.Fz = self.buoyancy_force + self.gravitational_force
-        self.Gy = self.torque
 
+class DynamicsSolver:
+    def __init__(self, timestep, gamma_u, gamma_w, gamma_omega):
+        self.dt = timestep
+        self.gamma_u = gamma_u
+        self.gamma_w = gamma_w
+        self.gamma_omega = gamma_omega
 
-        
+    def evolve(self, obj):
+        obj.calculate_forces_torques()
+
+        obj.u += (obj.Fx / obj.mass) * self.dt - obj.u * abs(obj.u) * self.gamma_u * self.dt
+        obj.w += (obj.Fz / obj.mass) * self.dt - obj.w * abs(obj.w) * self.gamma_w * self.dt
+        obj.omega += (obj.Gy / obj.Iy) * self.dt - obj.omega * abs(obj.omega) * self.gamma_omega * self.dt
+
+        obj.x += obj.u * self.dt
+        obj.z += obj.w * self.dt
+        obj.theta += obj.omega * self.dt
+
+    
