@@ -35,8 +35,11 @@ class Shape2D:
     def display(self):
         vals = self.traverse()
         for val in vals:
+            if val is None: break
             val.display()
 
+    def print_number_of_vertices(self):
+        print("Number of vertices:", self.n)
 
     def traverse(self):
         count = 0
@@ -44,3 +47,4 @@ class Shape2D:
         while count < self.n:
             yield curr
             curr = curr.next
+            count += 1
