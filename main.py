@@ -1,3 +1,7 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mplpatches
+
 class Point2D:
     def __init__(self, x, z, prev=None, next=None):
         self.x = x
@@ -7,6 +11,27 @@ class Point2D:
 
     def display(self, label=""):
         print(f"Point2D {label}: x = {self.x}, z = {self.z}")
+
+    def intersection_with_horizontal(self, other, zlevel):
+        """
+        Calculates the coordinates of the point of intersection 
+        of the line segment between this point and another point with a horizontal plane at z=zlevel, 
+        and returns this as another Point2D instance.
+
+        Parameters:
+            other (Point2D): Another Point2D instance representing another point between which we draw a line segment.
+
+            zlevel (float): A float indicating the vertical elevation of the horizontal line.
+
+        Returns:
+            intersection (Point2D): A Point2D instance representing the intersection point.
+        
+        """
+        x1, z1 = self.x, self.z
+        x2, z2 = other.x, other.z
+        z0 = zlevel
+        xi, zi = (x2 * (z0 - z1) - x1 * (z0 - z2)) / (z2 - z1), z0
+        return Point2D(xi, zi)
 
 class Polygon:
     def __init__(self, head=None, number_of_vertices=0):
@@ -120,6 +145,18 @@ class Polygon:
         self.calculate_centroid()
         self.calculate_moments_of_inertia()
 
+    def insert_point(self, vertex: Point2D):
+        """
+        Inserts a vertex into the polygon. 
+        The inserted vertex becomes the last vertex in the chain,
+        so vertices should be inserted sequentially by connectivity.
+
+        Parameters:
+            vertex: the vertex to be inserted.
+        
+        """
+        self.insert(vertex.x, vertex.z)
+
     def display(self):
         """
         Prints basic info about the polygon instance to the terminal.
@@ -156,3 +193,97 @@ class Polygon:
             curr = curr.next
             count += 1
 
+class Iceberg2D:
+    def __init__(self, shape, x=0.0, z=0.0, theta=0.0, u=0.0, w=0.0, omega=0.0, density_ice=917, density_water=1025, length=1.0, water_level=0.0, gravity=9.81):
+        self.shape = shape
+        self.x = x
+        self.z = z
+        self.theta = theta
+        self.u = u
+        self.w = w
+        self.omega = omega
+        self.density_ice = density_ice
+        self.density_water = density_water
+        self.length = length
+        self.water_level = water_level
+        self.gravity = gravity
+        self.area = self.shape.area
+        self.volume = self.area * self.length
+        self.mass = self.volume * self.density_ice
+        self.Ix = self.shape.Ix * self.density_ice
+        self.Iy = self.shape.Iy * self.density_ice
+        self.Iz = self.shape.Iz * self.density_ice
+        self.update_vertices()
+        self.update_submerged()
+        self.calculate_forces_torques()
+
+
+    def update_vertices(self):
+        self.vertices = Polygon()
+        xc, zc = self.shape.centroid.x, self.shape.centroid.z
+        cos = np.cos(self.theta)
+        sin = np.sin(self.theta)
+        for vertex_default in self.shape.traverse():
+            xi, zi = vertex_default.x, vertex_default.z
+            xt = (xi - xc) * cos - (zi - zc) * sin + self.x
+            zt = (xi - xc) * sin + (zi - zc) * cos + self.z
+            self.vertices.insert(xt, zt)
+
+    def update_submerged(self):
+        self.submerged = Polygon()
+        for vertex in self.vertices.traverse():
+            if vertex.z <= self.water_level:
+                self.submerged.insert_point(vertex)
+            else:
+                if vertex.prev.z <= self.water_level:
+                    self.submerged.insert_point(vertex.intersection_with_horizontal(vertex.prev, self.water_level))
+                if vertex.next.z <= self.water_level:
+                    self.submerged.insert_point(vertex.intersection_with_horizontal(vertex.next, self.water_level))
+
+        self.volume_submerged = self.submerged.area * self.length
+
+
+    def plot_iceberg(self):
+        points = []
+        points_sub = []
+        xmax = -np.inf
+        xmin = np.inf
+        zmax = -np.inf
+        zmin = np.inf
+        for vertex in self.vertices.traverse():
+            points.append((vertex.x, vertex.z))
+            xmax = vertex.x if vertex.x > xmax else xmax
+            xmin = vertex.x if vertex.x < xmin else xmin
+            zmax = vertex.z if vertex.z > zmax else zmax
+            zmin = vertex.z if vertex.z < zmin else zmin
+
+        for vertex in self.submerged.traverse():
+            points_sub.append((vertex.x, vertex.z))
+
+        xmin = xmin - 1
+        xmax = xmax + 1
+        zmin = zmin - 1
+        zmax = zmax + 1
+        fig, ax = plt.subplots()
+        ax.plot([xmin, xmax], [self.water_level, self.water_level], color="black", label="water level", zorder=-1)
+        iceberg = mplpatches.Polygon(points, closed=True, facecolor="lightblue", edgecolor="black", label="iceberg", zorder=1)
+        submerged = mplpatches.Polygon(points_sub, closed=True, facecolor="blue", edgecolor="red", label="submerged", zorder=2)
+        ax.add_patch(iceberg)
+        ax.add_patch(submerged)
+        plt.plot(self.vertices.centroid.x, self.vertices.centroid.z, "ko", label="centre of mass", zorder=3)
+        plt.plot(self.submerged.centroid.x, self.submerged.centroid.z, "ro", label="centre of buoyancy", zorder=4)
+        ax.set_xlim(xmin = xmin, xmax = xmax)
+        ax.set_ylim(ymin = zmin, ymax = zmax)
+        ax.legend()
+        plt.show()
+
+    def calculate_forces_torques(self):
+        self.gravitational_force = -self.mass * self.gravity
+        self.buoyancy_force = self.volume_submerged * self.density_ice * self.gravity
+        self.torque = (self.submerged.centroid.x - self.x) * self.buoyancy_force
+        self.Fx = 0.0
+        self.Fz = self.buoyancy_force + self.gravitational_force
+        self.Gy = self.torque
+
+
+        
