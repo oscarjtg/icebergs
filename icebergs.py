@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mplpatches
@@ -331,11 +332,21 @@ class Iceberg2D:
         plt.plot(self.submerged.centroid.x, self.submerged.centroid.z, "ro", label="centre of buoyancy", zorder=4)
         ax.set_xlim(xmin = xmin, xmax = xmax)
         ax.set_ylim(ymin = zmin, ymax = zmax)
+        ax.set_xlabel("x")
+        ax.set_ylabel("z")
+        ax.set_title(f"t = {self.time:06.1f}")
+        ax.set_aspect("equal")
         ax.legend()
-        plt.show()
         if save:
-            savestring = f"{self.name}_t{self.time}.png"
+            plotdir = "./plots"
+            savedir = plotdir + f"/{self.name}"
+            if not os.path.isdir(savedir):
+                os.makedirs(savedir)
+            savestring = f"{savedir}/{self.name}_t{self.time:06.1f}.png"
             plt.savefig(savestring, dpi=100)
+            plt.close()
+        else:
+            plt.show()
 
 
 class DynamicsSolver:
