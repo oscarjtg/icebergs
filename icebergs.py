@@ -263,6 +263,25 @@ class Iceberg2D:
 
         self.volume_submerged = self.submerged.area * self.length
 
+    def check_collision_with_wall(self, xwall=0.0):
+        """
+        Checks whether any vertex is inside a wall at x=xwall.
+        "Inside" means "to the left of".
+
+        Parameters:
+            xwall (float): horizontal coordinate of wall
+
+        Returns:
+            (bool, float, float): Whether or not there is an intersection,
+            followed by the components of the position vector from the 
+            intersecting vertex and the iceberg centre of mass, (r_x, r_z).
+        
+        """
+        self.update_vertices()
+        for vertex in self.vertices.traverse():
+            if vertex.x < xwall: return (True, vertex.x-self.x, vertex.z-self.z) 
+        return (False, 0.0, 0.0)
+
     def plot_iceberg(self):
         points = []
         points_sub = []
@@ -299,11 +318,13 @@ class Iceberg2D:
 
 
 class DynamicsSolver:
-    def __init__(self, timestep, gamma_u, gamma_w, gamma_omega):
+    def __init__(self, timestep, gamma_u, gamma_w, gamma_omega, xwall, restitution):
         self.dt = timestep
         self.gamma_u = gamma_u
         self.gamma_w = gamma_w
         self.gamma_omega = gamma_omega
+        self.xwall = xwall
+        self.restitution = restitution
 
     def evolve(self, obj):
         obj.calculate_forces_torques()
@@ -315,5 +336,24 @@ class DynamicsSolver:
         obj.x += obj.u * self.dt
         obj.z += obj.w * self.dt
         obj.theta += obj.omega * self.dt
+
+        # Check for intersections.
+        collision, rx, rz = obj.check_collision_with_wall(self.xwall)
+        if collision:
+            # Velocity impulse.
+            impulse = -(1.0 + self.restitution) * (obj.u + obj.omega * rz) / (1./obj.mass + (rz*rz / obj.Iy))
+            obj.u += impulse / obj.mass
+            obj.omega += (impulse / obj.Iy) * rz
+
+            # Separate position correct to prevent penetration
+            obj.x += self.xwall - (rx + obj.x)
+
+    def simulate(self, obj, n_timesteps, plot=True):
+        for _ in range(n_timesteps):
+            self.evolve(obj)
+        if plot: obj.plot_iceberg()
+        return
+
+
 
     
