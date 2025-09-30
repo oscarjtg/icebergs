@@ -208,7 +208,7 @@ class Rectangle(Polygon):
         self.insert(-a/2.0, -b/2.0)
 
 class Iceberg2D:
-    def __init__(self, shape, x=0.0, z=0.0, theta=0.0, u=0.0, w=0.0, omega=0.0, density_ice=917, density_water=1025, length=1.0, water_level=0.0, gravity=9.81):
+    def __init__(self, shape, x=0.0, z=0.0, theta=0.0, u=0.0, w=0.0, omega=0.0, density_ice=917, density_water=1025, length=1.0, water_level=0.0, gravity=9.81, name="iceberg"):
         self.shape = shape
         self.x = x
         self.z = z
@@ -221,6 +221,7 @@ class Iceberg2D:
         self.length = length
         self.water_level = water_level
         self.gravity = gravity
+        self.name = name
         self.area = self.shape.area
         self.volume = self.area * self.length
         self.mass = self.volume * self.density_ice
@@ -228,6 +229,7 @@ class Iceberg2D:
         self.Iy = self.shape.Iy * self.density_ice
         self.Iz = self.shape.Iz * self.density_ice
         self.calculate_forces_torques()
+        self.time = 0.0
 
     def calculate_forces_torques(self):
         self.update_vertices()
@@ -282,7 +284,23 @@ class Iceberg2D:
             if vertex.x < xwall: return (True, vertex.x-self.x, vertex.z-self.z) 
         return (False, 0.0, 0.0)
 
-    def plot_iceberg(self):
+    def plot_iceberg(self, save=False):
+        """
+        Plots the iceberg position, 
+        highlighting the full outline, submerged outline, 
+        full centroid, submerged centroid, and water level.
+
+        Parameters
+        ----------
+        save (bool):
+            A boolean that determines whether or not to save the figure to disk.
+            The figure will be called f"{self.name}_t{self.time}"
+            so it is recommended to give a unique name parameter 
+            upon object initialisation if you would like to save the plot.
+        
+        """
+        self.update_vertices()
+        self.update_submerged()
         points = []
         points_sub = []
         xmax = -np.inf
@@ -315,6 +333,9 @@ class Iceberg2D:
         ax.set_ylim(ymin = zmin, ymax = zmax)
         ax.legend()
         plt.show()
+        if save:
+            savestring = f"{self.name}_t{self.time}.png"
+            plt.savefig(savestring, dpi=100)
 
 
 class DynamicsSolver:
@@ -348,10 +369,32 @@ class DynamicsSolver:
             # Separate position correct to prevent penetration
             obj.x += self.xwall - (rx + obj.x)
 
-    def simulate(self, obj, n_timesteps, plot=True):
+        obj.time += self.dt
+
+    def simulate(self, obj, n_timesteps, plot=True, saveplot=False):
+        """
+        Simulates iceberg evolution for multiple timesteps.
+        The iceberg is evolved by calling the `self.evolve()` method.
+
+        Parameters
+        ----------
+        obj (Iceberg2D):
+            The iceberg that we wish to simulate.
+
+        n_timesteps (int):
+            An integer number of time steps for which to evolve the object.
+
+        plot (bool):
+            A boolean saying whether or not to plot the state at the end of the simulation.
+        
+        saveplot (bool):
+            A boolean saying whether or not to save the plot created. 
+            This only does something if plot == True.
+
+        """
         for _ in range(n_timesteps):
             self.evolve(obj)
-        if plot: obj.plot_iceberg()
+        if plot: obj.plot_iceberg(saveplot)
         return
 
 
