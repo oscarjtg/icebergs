@@ -193,6 +193,20 @@ class Polygon:
             curr = curr.next
             count += 1
 
+class Rectangle(Polygon):
+    def __init__(self, a, b):
+        super().__init__()
+        self.a = a
+        self.b = b
+        
+        # Initialise a rectangle centred at (0, 0) 
+        # with horizontal side length a 
+        # and vertical side length b.
+        self.insert(a/2.0, -b/2.0)
+        self.insert(a/2.0, b/2.0)
+        self.insert(-a/2.0, b/2.0)
+        self.insert(-a/2.0, -b/2.0)
+
 class Iceberg2D:
     def __init__(self, shape, x=0.0, z=0.0, theta=0.0, u=0.0, w=0.0, omega=0.0, density_ice=917, density_water=1025, length=1.0, water_level=0.0, gravity=9.81):
         self.shape = shape
