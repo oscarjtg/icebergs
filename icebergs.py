@@ -232,6 +232,28 @@ class Iceberg2D:
         self.calculate_forces_torques()
         self.time = 0.0
 
+    def set_x(self, x):
+        self.x = x
+        self.update_vertices()
+        self.update_submerged()
+
+    def set_z(self, z):
+        self.z = z
+        self.update_vertices()
+        self.update_submerged()
+
+    def set_theta(self, theta):
+        self.theta = theta
+        self.update_vertices()
+        self.update_submerged()
+
+    def set_position(self, x, z, theta):
+        self.x = x
+        self.z = z
+        self.theta = theta
+        self.update_vertices()
+        self.update_submerged()
+
     def calculate_forces_torques(self):
         self.update_vertices()
         self.update_submerged()
@@ -350,13 +372,22 @@ class Iceberg2D:
 
 
 class DynamicsSolver:
-    def __init__(self, timestep, gamma_u, gamma_w, gamma_omega, xwall, restitution):
+    def __init__(self, timestep, gamma_u, gamma_w, gamma_omega, xwall, restitution, n_timesteps):
         self.dt = timestep
         self.gamma_u = gamma_u
         self.gamma_w = gamma_w
         self.gamma_omega = gamma_omega
         self.xwall = xwall
         self.restitution = restitution
+        self.n_timesteps = n_timesteps
+        self.x = np.zeros(n_timesteps + 1)
+        self.z = np.zeros(n_timesteps + 1)
+        self.theta = np.zeros(n_timesteps + 1)
+        self.u = np.zeros(n_timesteps + 1)
+        self.w = np.zeros(n_timesteps + 1)
+        self.omega = np.zeros(n_timesteps + 1)
+        self.t = np.zeros(n_timesteps + 1)
+        self.timestep_number = 0
 
     def evolve(self, obj):
         obj.calculate_forces_torques()
@@ -403,10 +434,55 @@ class DynamicsSolver:
             This only does something if plot == True.
 
         """
+        # Add initial condition (if this is the initial timestep).
+        if self.timestep_number == 0:
+            self.x[0] = obj.x
+            self.z[0] = obj.z
+            self.theta[0] = obj.theta
+            self.u[0] = obj.u
+            self.w[0] = obj.w
+            self.omega[0] = obj.omega
+            self.t[0] = obj.time
+        
+        # Run `n_timesteps` time steps of the model.
         for _ in range(n_timesteps):
             self.evolve(obj)
+            self.timestep_number += 1
+            self.x[self.timestep_number] = obj.x
+            self.z[self.timestep_number] = obj.z
+            self.theta[self.timestep_number] = obj.theta
+            self.u[self.timestep_number] = obj.u
+            self.w[self.timestep_number] = obj.w
+            self.omega[self.timestep_number] = obj.omega
+            self.t[self.timestep_number] = obj.time
+
+        # Save a plot of the iceberg, only if saveplot is True.
         if plot: obj.plot_iceberg(saveplot)
         return
+    
+    def plot_trajectory(self):
+        fig, ax = plt.subplots(2, 3, figsize=(12, 8), sharex=True)
+        ax[0][0].plot(self.t, self.x)
+        ax[0][1].plot(self.t, self.z)
+        ax[0][2].plot(self.t, self.theta)
+        ax[1][0].plot(self.t, self.u)
+        ax[1][1].plot(self.t, self.w)
+        ax[1][2].plot(self.t, self.omega)
+
+        ax[0][0].set_ylabel("x  [m]")
+        ax[0][1].set_ylabel("z  [m]")
+        ax[0][2].set_ylabel(r"$\theta$  [rad]")
+        ax[1][0].set_ylabel("u  [m]")
+        ax[1][1].set_ylabel("w  [m]")
+        ax[1][2].set_ylabel(r"$\omega$  [rad s$^{-1}$]")
+
+        ax[1][0].set_xlabel("t  [s]")
+        ax[1][1].set_xlabel("t  [s]")
+        ax[1][2].set_xlabel("t  [s]")
+
+        plt.tight_layout()
+
+        plt.plot()
 
 
 
