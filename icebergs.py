@@ -461,6 +461,9 @@ class DynamicsSolver:
         return
     
     def plot_trajectory(self):
+        """
+        Plots x, z, theta, u, w, and omega of the iceberg against time.
+        """
         fig, ax = plt.subplots(2, 3, figsize=(12, 8), sharex=True)
         ax[0][0].plot(self.t, self.x)
         ax[0][1].plot(self.t, self.z)
