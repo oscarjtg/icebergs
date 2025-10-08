@@ -259,7 +259,7 @@ class Iceberg2D:
         self.update_submerged()
         self.gravitational_force = -self.mass * self.gravity
         self.buoyancy_force = self.volume_submerged * self.density_water * self.gravity
-        self.torque = (self.submerged.centroid.x - self.x) * self.buoyancy_force
+        self.torque = -(self.submerged.centroid.x - self.x) * self.buoyancy_force
         self.Fx = 0.0
         self.Fz = self.buoyancy_force + self.gravitational_force
         self.Gy = self.torque
@@ -271,8 +271,8 @@ class Iceberg2D:
         sin = np.sin(self.theta)
         for vertex_default in self.shape.traverse():
             xi, zi = vertex_default.x, vertex_default.z
-            xt = (xi - xc) * cos - (zi - zc) * sin + self.x
-            zt = (xi - xc) * sin + (zi - zc) * cos + self.z
+            xt = (xi - xc) * cos + (zi - zc) * sin + self.x
+            zt =-(xi - xc) * sin + (zi - zc) * cos + self.z
             self.vertices.insert(xt, zt)
 
     def update_submerged(self):
@@ -472,16 +472,16 @@ class DynamicsSolver:
         ax[1][1].plot(self.t, self.w)
         ax[1][2].plot(self.t, self.omega)
 
-        ax[0][0].set_ylabel("x  [m]")
-        ax[0][1].set_ylabel("z  [m]")
+        ax[0][0].set_ylabel(r"$x$  [m]")
+        ax[0][1].set_ylabel(r"$z$  [m]")
         ax[0][2].set_ylabel(r"$\theta$  [rad]")
-        ax[1][0].set_ylabel("u  [m]")
-        ax[1][1].set_ylabel("w  [m]")
+        ax[1][0].set_ylabel(r"$u$  [m s$^{-1}$]")
+        ax[1][1].set_ylabel(r"$w$  [m s$^{-1}$]")
         ax[1][2].set_ylabel(r"$\omega$  [rad s$^{-1}$]")
 
-        ax[1][0].set_xlabel("t  [s]")
-        ax[1][1].set_xlabel("t  [s]")
-        ax[1][2].set_xlabel("t  [s]")
+        ax[1][0].set_xlabel(r"$t$  [s]")
+        ax[1][1].set_xlabel(r"$t$  [s]")
+        ax[1][2].set_xlabel(r"$t$  [s]")
 
         plt.tight_layout()
 
