@@ -307,7 +307,7 @@ class Iceberg2D:
             if vertex.x < xwall: return (True, vertex.x-self.x, vertex.z-self.z) 
         return (False, 0.0, 0.0)
 
-    def plot_iceberg(self, save=False):
+    def plot_iceberg(self, xwall=None, save=False, lims=None):
         """
         Plots the iceberg position, 
         highlighting the full outline, submerged outline, 
@@ -315,11 +315,19 @@ class Iceberg2D:
 
         Parameters
         ----------
+        xwall (float or None):
+            Add a vertical line at x=xwall to represent the position of a vertical wall.
+
         save (bool):
             A boolean that determines whether or not to save the figure to disk.
             The figure will be called f"{self.name}_t{self.time}"
             so it is recommended to give a unique name parameter 
             upon object initialisation if you would like to save the plot.
+
+        lims (list of floats, or None):
+            A list containing the x- and z- limits of the plot,
+            [xmin, xmax, zmin, zmax],
+            or None. If None, choose axis limits based on vertex locations.
         
         """
         self.update_vertices()
@@ -336,14 +344,23 @@ class Iceberg2D:
             xmin = vertex.x if vertex.x < xmin else xmin
             zmax = vertex.z if vertex.z > zmax else zmax
             zmin = vertex.z if vertex.z < zmin else zmin
+        if lims is None:
+            xscale = 0.5 * (xmax - xmin)
+            zscale = 0.5 * (zmax - zmin)
+            xmin = xmin - xscale
+            xmax = xmax + xscale
+            zmin = zmin - zscale
+            zmax = zmax + zscale
+        else:
+            xmin = lims[0]
+            xmax = lims[1]
+            zmin = lims[2]
+            zmax = lims[3]
 
         for vertex in self.submerged.traverse():
             points_sub.append((vertex.x, vertex.z))
 
-        xmin = xmin - 1
-        xmax = xmax + 1
-        zmin = zmin - 1
-        zmax = zmax + 1
+        
         fig, ax = plt.subplots()
         ax.plot([xmin, xmax], [self.water_level, self.water_level], color="black", label="water level", zorder=-1)
         iceberg = mplpatches.Polygon(points, closed=True, facecolor="lightblue", edgecolor="black", label="iceberg", zorder=1)
@@ -352,6 +369,8 @@ class Iceberg2D:
         ax.add_patch(submerged)
         plt.plot(self.vertices.centroid.x, self.vertices.centroid.z, "ko", label="centre of mass", zorder=3)
         plt.plot(self.submerged.centroid.x, self.submerged.centroid.z, "ro", label="centre of buoyancy", zorder=4)
+        if xwall is not None:
+            plt.plot([xwall, xwall], [zmin, zmax], color="black", ls="dashed", label="wall")
         ax.set_xlim(xmin = xmin, xmax = xmax)
         ax.set_ylim(ymin = zmin, ymax = zmax)
         ax.set_xlabel("x")
@@ -364,7 +383,7 @@ class Iceberg2D:
             savedir = plotdir + f"/{self.name}"
             if not os.path.isdir(savedir):
                 os.makedirs(savedir)
-            savestring = f"{savedir}/{self.name}_t{self.time:06.1f}.png"
+            savestring = f"{savedir}/{self.name}_t{self.time:08.3f}.png"
             plt.savefig(savestring, dpi=100)
             plt.close()
         else:
@@ -413,7 +432,7 @@ class DynamicsSolver:
 
         obj.time += self.dt
 
-    def simulate(self, obj, n_timesteps, plot=True, saveplot=False):
+    def simulate(self, obj, n_timesteps, plot=True, saveplot=False, plotlims=None):
         """
         Simulates iceberg evolution for multiple timesteps.
         The iceberg is evolved by calling the `self.evolve()` method.
@@ -457,7 +476,7 @@ class DynamicsSolver:
             self.t[self.timestep_number] = obj.time
 
         # Save a plot of the iceberg, only if saveplot is True.
-        if plot: obj.plot_iceberg(saveplot)
+        if plot: obj.plot_iceberg(self.xwall, saveplot, plotlims)
         return
     
     def plot_trajectory(self):
