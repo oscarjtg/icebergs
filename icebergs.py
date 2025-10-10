@@ -527,9 +527,7 @@ class DynamicsSolver:
         return
     
     def plot_trajectory(self):
-        """
-        Plots x, z, theta, u, w, and omega of the iceberg against time.
-        """
+        """Plots x, z, theta, u, w, and omega of the iceberg against time."""
         fig, ax = plt.subplots(2, 3, figsize=(12, 8), sharex=True)
         ax[0][0].plot(self.t, self.x)
         ax[0][1].plot(self.t, self.z)
@@ -553,6 +551,17 @@ class DynamicsSolver:
 
         plt.plot()
 
-
+    def plot_energy(self):
+        """Plots iceberg kinetic and potential energy, and total energy, against time"""
+        plt.plot(self.t, self.KEX, color="gold", lw=2, label="KEX")
+        plt.plot(self.t, self.KEZ, color="orange", lw=2, label="KEZ")
+        plt.plot(self.t, self.KER, color="red", lw=2, label="KER")
+        plt.plot(self.t, self.PE - self.PE[-1], color="dodgerblue", lw=2, label="PE");
+        plt.plot(self.t, self.KEX+self.KEZ+self.KER+self.PE-self.PE[-1], lw=3, color="black", label="Total Energy")
+        plt.xlabel(r"$t$  [s]", fontsize=16)
+        plt.ylabel(r"energy  [J]", fontsize=16)
+        plt.gca().tick_params(axis='both', which='major', labelsize=14)
+        plt.legend(fontsize=13)
+        plt.plot()
 
     
