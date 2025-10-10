@@ -305,7 +305,7 @@ class Iceberg2D:
         self.update_vertices()
         for vertex in self.vertices.traverse():
             if vertex.x < xwall: return (True, vertex.x-self.x, vertex.z-self.z) 
-        return (False, 0.0, 0.0)
+        return (False, np.nan, np.nan)
 
     def plot_iceberg(self, xwall=None, save=False, lims=None):
         """
@@ -406,6 +406,10 @@ class DynamicsSolver:
         self.w = np.zeros(n_timesteps + 1)
         self.omega = np.zeros(n_timesteps + 1)
         self.t = np.zeros(n_timesteps + 1)
+        self.collision = np.zeros(n_timesteps + 1)
+        self.impulse = np.zeros(n_timesteps + 1)
+        self.rx = np.zeros(n_timesteps + 1)
+        self.rz = np.zeros(n_timesteps + 1)
         self.timestep_number = 0
 
     def evolve(self, obj):
@@ -421,9 +425,11 @@ class DynamicsSolver:
 
         # Check for intersections.
         collision, rx, rz = obj.check_collision_with_wall(self.xwall)
+        impulse = 0.0
         if collision:
             # Velocity impulse.
             impulse = -(1.0 + self.restitution) * (obj.u + obj.omega * rz) / (1./obj.mass + (rz*rz / obj.Iy))
+            if impulse < 0.0: impulse = 0.0
             obj.u += impulse / obj.mass
             obj.omega += (impulse / obj.Iy) * rz
 
@@ -431,6 +437,7 @@ class DynamicsSolver:
             obj.x += self.xwall - (rx + obj.x)
 
         obj.time += self.dt
+        return collision, impulse, rx, rz
 
     def simulate(self, obj, n_timesteps, plot=True, saveplot=False, plotlims=None):
         """
@@ -462,11 +469,17 @@ class DynamicsSolver:
             self.w[0] = obj.w
             self.omega[0] = obj.omega
             self.t[0] = obj.time
-        
+            self.collision[0] = False
+            self.impulse[0] = 0.0
+            self.rx[0] = np.nan
+            self.rz[0] = np.nan
+            
         # Run `n_timesteps` time steps of the model.
         for _ in range(n_timesteps):
-            self.evolve(obj)
+            coll, j, rx, rz = self.evolve(obj)
             self.timestep_number += 1
+
+            # Save data to arrays.
             self.x[self.timestep_number] = obj.x
             self.z[self.timestep_number] = obj.z
             self.theta[self.timestep_number] = obj.theta
@@ -474,6 +487,10 @@ class DynamicsSolver:
             self.w[self.timestep_number] = obj.w
             self.omega[self.timestep_number] = obj.omega
             self.t[self.timestep_number] = obj.time
+            self.collision[self.timestep_number] = coll
+            self.impulse[self.timestep_number] = j
+            self.rx[self.timestep_number] = rx
+            self.rz[self.timestep_number] = rz
 
         # Save a plot of the iceberg, only if saveplot is True.
         if plot: obj.plot_iceberg(self.xwall, saveplot, plotlims)

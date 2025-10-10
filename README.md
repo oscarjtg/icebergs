@@ -14,6 +14,7 @@ import icebergs
 ```python
 import icebergs
 import numpy as np
+import matplotlib.pyplot as plt
 
 def init_depth(rho_i, rho_w, H):
     """Returns an appropriate initial depth for the iceberg, based on hydrostatic balance"""
