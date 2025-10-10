@@ -194,6 +194,19 @@ class Polygon:
             curr = curr.next
             count += 1
 
+    def copy(self):
+        """
+        Creates a new Polygon instance with the same values and structure as self.
+        
+        Returns
+        -------
+        (Polygon)
+        """
+        new = Polygon()
+        for vertex in self.traverse():
+            new.insert(vertex.x, vertex.z)
+        return new
+
 class Rectangle(Polygon):
     def __init__(self, a, b):
         super().__init__()
@@ -211,6 +224,7 @@ class Rectangle(Polygon):
 class Iceberg2D:
     def __init__(self, shape, x=0.0, z=0.0, theta=0.0, u=0.0, w=0.0, omega=0.0, density_ice=917, density_water=1025, length=1.0, water_level=0.0, gravity=9.81, name="iceberg"):
         self.shape = shape
+        self.vertices = shape.copy()
         self.x = x
         self.z = z
         self.theta = theta
@@ -229,6 +243,8 @@ class Iceberg2D:
         self.Ix = self.shape.Ix * self.density_ice
         self.Iy = self.shape.Iy * self.density_ice
         self.Iz = self.shape.Iz * self.density_ice
+        self.update_vertices()
+        self.update_submerged()
         self.calculate_forces_torques()
         self.time = 0.0
 
@@ -254,9 +270,10 @@ class Iceberg2D:
         self.update_vertices()
         self.update_submerged()
 
-    def calculate_forces_torques(self):
-        self.update_vertices()
-        self.update_submerged()
+    def calculate_forces_torques(self, update_needed=False):
+        if update_needed:
+            self.update_vertices()
+            self.update_submerged()
         self.gravitational_force = -self.mass * self.gravity
         self.buoyancy_force = self.volume_submerged * self.density_water * self.gravity
         self.torque = -(self.submerged.centroid.x - self.x) * self.buoyancy_force
@@ -273,24 +290,27 @@ class Iceberg2D:
     def calculate_KER(self):
         return 0.5 * self.Iy * self.omega * self.omega
     
-    def calculate_PE(self):
-        self.update_vertices()
-        self.update_submerged()
+    def calculate_PE(self, update_needed=False):
+        if update_needed:
+            self.update_vertices()
+            self.update_submerged()
         return (
              self.gravity * self.density_ice * self.volume * self.z 
             -self.gravity * self.density_water * self.volume_submerged * self.submerged.centroid.z
         )
 
     def update_vertices(self):
-        self.vertices = Polygon()
         xc, zc = self.shape.centroid.x, self.shape.centroid.z
         cos = np.cos(self.theta)
         sin = np.sin(self.theta)
+        vertex_current = self.vertices.head
         for vertex_default in self.shape.traverse():
             xi, zi = vertex_default.x, vertex_default.z
             xt = (xi - xc) * cos + (zi - zc) * sin + self.x
             zt =-(xi - xc) * sin + (zi - zc) * cos + self.z
-            self.vertices.insert(xt, zt)
+            vertex_current.x = xt
+            vertex_current.z = zt
+            vertex_current = vertex_current.next
 
     def update_submerged(self):
         self.submerged = Polygon()
@@ -458,6 +478,8 @@ class DynamicsSolver:
             obj.x += self.xwall - (rx + obj.x)
 
         obj.time += self.dt
+        obj.update_vertices()
+        obj.update_submerged()
         return collision, impulse, rx, rz
 
     def simulate(self, obj, n_timesteps, plot=True, saveplot=False, plotlims=None):
