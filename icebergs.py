@@ -264,6 +264,23 @@ class Iceberg2D:
         self.Fz = self.buoyancy_force + self.gravitational_force
         self.Gy = self.torque
 
+    def calculate_KEX(self):
+        return 0.5 * self.mass * self.u * self.u
+    
+    def calculate_KEZ(self):
+        return 0.5 * self.mass * self.w * self.w
+    
+    def calculate_KER(self):
+        return 0.5 * self.Iy * self.omega * self.omega
+    
+    def calculate_PE(self):
+        self.update_vertices()
+        self.update_submerged()
+        return (
+             self.gravity * self.density_ice * self.volume * self.z 
+            -self.gravity * self.density_water * self.volume_submerged * self.submerged.centroid.z
+        )
+
     def update_vertices(self):
         self.vertices = Polygon()
         xc, zc = self.shape.centroid.x, self.shape.centroid.z
@@ -410,6 +427,10 @@ class DynamicsSolver:
         self.impulse = np.zeros(n_timesteps + 1)
         self.rx = np.zeros(n_timesteps + 1)
         self.rz = np.zeros(n_timesteps + 1)
+        self.KEX = np.zeros(n_timesteps + 1)
+        self.KEZ = np.zeros(n_timesteps + 1)
+        self.KER = np.zeros(n_timesteps + 1)
+        self.PE = np.zeros(n_timesteps + 1)
         self.timestep_number = 0
 
     def evolve(self, obj):
@@ -473,6 +494,11 @@ class DynamicsSolver:
             self.impulse[0] = 0.0
             self.rx[0] = np.nan
             self.rz[0] = np.nan
+            self.KEX[0] = obj.calculate_KEX()
+            self.KEZ[0] = obj.calculate_KEZ()
+            self.KER[0] = obj.calculate_KER()
+            self.PE[0] = obj.calculate_PE()
+
             
         # Run `n_timesteps` time steps of the model.
         for _ in range(n_timesteps):
@@ -491,6 +517,10 @@ class DynamicsSolver:
             self.impulse[self.timestep_number] = j
             self.rx[self.timestep_number] = rx
             self.rz[self.timestep_number] = rz
+            self.KEX[self.timestep_number] = obj.calculate_KEX()
+            self.KEZ[self.timestep_number] = obj.calculate_KEZ()
+            self.KER[self.timestep_number] = obj.calculate_KER()
+            self.PE[self.timestep_number] = obj.calculate_PE()
 
         # Save a plot of the iceberg, only if saveplot is True.
         if plot: obj.plot_iceberg(self.xwall, saveplot, plotlims)
