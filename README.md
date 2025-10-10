@@ -16,20 +16,18 @@ import icebergs
 import numpy as np
 import matplotlib.pyplot as plt
 
-def init_depth(rho_i, rho_w, H):
-    """Returns an appropriate initial depth for the iceberg, based on hydrostatic balance"""
-    return (0.5 - (rho_i/rho_w)) * H
-
 # Initialise the iceberg shape (`rect`), and the iceberg (`berg`) itself.
 width = 0.05; height = 0.1
 rect = icebergs.Rectangle(width, height)
 berg = icebergs.Iceberg2D(rect)
 
 # Set the initial position and orientation of the iceberg.
+# set_hydrostatic_balance() method finds vertical coordinate z
+# such that iceberg is in hydrostatic balance at the given x and theta.
+x0 = 0.026
 theta_deg = -1.0
 theta = theta_deg * np.pi / 180
-z_init = init_depth(berg.density_ice, berg.density_water, rect.b)
-berg.set_position(x=0.026, z=z_init, theta=theta)
+berg.set_hydrostatic_balance(x=x0, theta=theta)
 
 # Set model parameters
 timestep = 0.002   # The model time step

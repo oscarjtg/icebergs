@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mplpatches
+from scipy.optimize import newton
 
 class Point2D:
     def __init__(self, x, z, prev=None, next=None):
@@ -269,6 +270,17 @@ class Iceberg2D:
         self.theta = theta
         self.update_vertices()
         self.update_submerged()
+
+    def set_hydrostatic_balance(self, x, theta):
+        """Set z such that iceberg is in hydrostatic balance at fixed x and theta."""
+        z0 = self.water_level # initial guess.
+        
+        def f(z):
+            self.set_position(x, z, theta)
+            return self.density_water * self.submerged.area - self.density_ice * self.vertices.area
+
+        z = newton(f, z0)
+        self.set_position(x, z, theta)
 
     def calculate_forces_torques(self, update_needed=False):
         if update_needed:
