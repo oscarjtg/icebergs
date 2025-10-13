@@ -271,6 +271,14 @@ class Iceberg2D:
         self.update_vertices()
         self.update_submerged()
 
+    def set_density_ice(self, density_ice):
+        self.density_ice = density_ice
+        self.mass = self.volume * self.density_ice
+        self.Ix = self.shape.Ix * self.density_ice
+        self.Iy = self.shape.Iy * self.density_ice
+        self.Iz = self.shape.Iz * self.density_ice
+        self.calculate_forces_torques()
+
     def set_hydrostatic_balance(self, x, theta):
         """Set z such that iceberg is in hydrostatic balance at fixed x and theta."""
         z0 = self.water_level # initial guess.
@@ -281,6 +289,7 @@ class Iceberg2D:
 
         z = newton(f, z0)
         self.set_position(x, z, theta)
+        return z
 
     def calculate_forces_torques(self, update_needed=False):
         if update_needed:
@@ -416,7 +425,7 @@ class Iceberg2D:
         submerged = mplpatches.Polygon(points_sub, closed=True, facecolor="blue", edgecolor="red", label="submerged", zorder=2)
         ax.add_patch(iceberg)
         ax.add_patch(submerged)
-        plt.plot(self.vertices.centroid.x, self.vertices.centroid.z, "ko", label="centre of mass", zorder=3)
+        plt.plot(self.x, self.z, "ko", label="centre of mass", zorder=3)
         plt.plot(self.submerged.centroid.x, self.submerged.centroid.z, "ro", label="centre of buoyancy", zorder=4)
         if xwall is not None:
             plt.plot([xwall, xwall], [zmin, zmax], color="black", ls="dashed", label="wall")
@@ -532,6 +541,8 @@ class DynamicsSolver:
             self.KEZ[0] = obj.calculate_KEZ()
             self.KER[0] = obj.calculate_KER()
             self.PE[0] = obj.calculate_PE()
+            # Save a plot of the iceberg, only if saveplot is True.
+            if plot: obj.plot_iceberg(self.xwall, saveplot, plotlims)
 
             
         # Run `n_timesteps` time steps of the model.
