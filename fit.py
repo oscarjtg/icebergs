@@ -103,6 +103,61 @@ def iceberg_trajectory(height, aspect_ratio, initial_angle_degrees=-5., density_
         
     return solver
 
+def make_dimensionless(t: np.ndarray, 
+                       x: np.ndarray, 
+                       z: np.ndarray, 
+                       theta: np.ndarray, 
+                       u: np.ndarray, 
+                       w: np.ndarray, 
+                       omega: np.ndarray, 
+                       height: float, 
+                       gprime: float):
+    """
+    Converts input arrays into arrays of dimensionless quantities.
+    
+    Parameters
+    ----------
+    t (np.ndarray)
+        1D numpy array contaning times, in seconds.
+
+    x (np.ndarray)
+        1D numpy array containing time series data of horizontal coordinate of centre of mass, in metres.
+
+    z (np.ndarray)
+        1D numpy array containing time series data of vertical coordinate of centre of mass, in metres.
+
+    theta (np.ndarray)
+        1D numpy array contaning time series data of angle, measured clockwise in degrees.
+
+    u (np.ndarray)
+        1D numpy array containing time series data of horizontal velocity, in metres.
+
+    w (np.ndarray)
+        1D numpy array containing time series data of vertical velocity, in metres.
+
+    omega (np.ndarray)
+        1D numpy array containing time series data of angular velocity, in metres.
+
+    height (np.ndarray)
+        Height of iceberg.
+
+    gprime (np.ndarray)
+        Reduced gravity.
+
+    Returns
+    --------
+    Tuple of 1D numpy arrays containing non-dimensionlised data from the input arrays.
+
+    """
+    t_d = np.sqrt(gprime / height) * t
+    x_d = x / height
+    z_d = z / height
+    theta_d = theta
+    u_d = u / np.sqrt(gprime * height)
+    w_d = w / np.sqrt(gprime * height)
+    omega_d = np.sqrt(height / gprime) * omega
+    return t_d, x_d, z_d, theta_d, u_d, w_d, omega_d
+
 def oscillating_decay_model(t, a0, a1, a2, a3):
     """
     Model of the form of the solution of a simple harmonic oscillator 
