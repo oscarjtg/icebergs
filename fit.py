@@ -192,6 +192,72 @@ def oscillating_decay_model(t, a0, a1, a2, a3):
     """
     return a0 / (1 + a1 * t) * np.sin(a2 * t + a3)
 
+def fourier_cosine_sum(coeffs, times, period, degree=10):
+    """
+    Computes the sum
+
+    coeffs[i] * np.cos(2 * np.pi * i * t / period)
+
+    for i from 0 to deg-1
+
+    between 0 < t < period
+
+    Parameters
+    ----------
+    coeffs (np.ndarray)
+        1D numpy array of floats containing cosine transform coefficients
+
+    times (np.ndarray)
+        1d numpy array of times at which to compute value
+
+    period (float)
+        The period of the signal
+
+    degree (int)
+        Integer giving highest degree to use in approximation. 
+        Must be less than or equal to the length of the coeffs arary.
+
+    Returns
+    -------
+    sum (np.ndarray)
+        The Fourier cosine sum.
+
+    """
+    return coeffs[:degree] @ np.cos(2 * np.pi * np.arange(degree)[:, None] * times / period)
+
+def dct_sum(coeffs, times, period, degree=10):
+    """
+    Computes the sum
+
+    coeffs[i] * np.cos(np.pi * i * t / period)
+
+    for i from 0 to deg-1
+
+    between 0 < t < period
+
+    Parameters
+    ----------
+    coeffs (np.ndarray)
+        1D numpy array of floats containing cosine transform coefficients
+
+    times (np.ndarray)
+        1d numpy array of times at which to compute value
+
+    period (float)
+        The period of the signal
+
+    degree (int)
+        Integer giving highest degree to use in approximation. 
+        Must be less than or equal to the length of the coeffs arary.
+
+    Returns
+    -------
+    sum (np.ndarray)
+        The Fourier cosine sum.
+
+    """
+    return coeffs[:degree] @ np.cos(np.pi * np.arange(degree)[:, None] * times / period)
+
 if __name__ == "__main__":
     height = 1.0
     aspect_ratio = 0.5
